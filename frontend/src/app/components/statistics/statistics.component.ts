@@ -21,18 +21,18 @@ Chart.register(...registerables);
             <select formControlName="timeRange" class="form-control" (change)="onTimeRangeChange()">
               <option value="day">今天</option>
               <option value="week">本周</option>
-              <option value="month" selected>本月</option>
+              <option value="month">本月</option>
               <option value="year">本年</option>
               <option value="custom">自定义</option>
             </select>
           </div>
           
-          <div *ngIf="form.get('timeRange')?.value === 'custom'" class="form-group">
+          <div *ngIf="isCustomRange" class="form-group">
             <label class="form-label">开始日期</label>
             <input type="date" formControlName="startDate" class="form-control">
           </div>
           
-          <div *ngIf="form.get('timeRange')?.value === 'custom'" class="form-group">
+          <div *ngIf="isCustomRange" class="form-group">
             <label class="form-label">结束日期</label>
             <input type="date" formControlName="endDate" class="form-control">
           </div>
@@ -315,6 +315,7 @@ export class StatisticsComponent implements OnInit, OnDestroy, AfterViewInit {
   private pieChart?: Chart;
   private subscription?: Subscription;
   private chartsInitialized = false;
+  private pendingStatistics?: Statistics;
 
   private colors = [
     '#3498db', '#e74c3c', '#27ae60', '#f39c12', '#9b59b6',
@@ -324,6 +325,10 @@ export class StatisticsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get pieChartColors(): string[] {
     return this.colors.slice(0, this.currentCategoryStats.length);
+  }
+
+  get isCustomRange(): boolean {
+    return this.form.get('timeRange')?.value === 'custom';
   }
 
   constructor(
@@ -347,6 +352,12 @@ export class StatisticsComponent implements OnInit, OnDestroy, AfterViewInit {
   ngAfterViewInit(): void {
     this.chartsInitialized = true;
     this.initCharts();
+    
+    if (this.pendingStatistics) {
+      this.statistics = this.pendingStatistics;
+      this.updateCharts();
+      this.pendingStatistics = undefined;
+    }
   }
 
   ngOnDestroy(): void {
@@ -409,8 +420,13 @@ export class StatisticsComponent implements OnInit, OnDestroy, AfterViewInit {
     this.subscription = this.transactionService.getStatistics(startTime, endTime).subscribe({
       next: (stats) => {
         this.statistics = stats;
-        this.updateCharts();
         this.loading = false;
+        
+        if (this.chartsInitialized) {
+          this.updateCharts();
+        } else {
+          this.pendingStatistics = stats;
+        }
       },
       error: () => {
         this.loading = false;
