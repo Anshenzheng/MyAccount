@@ -73,7 +73,9 @@ public class TransactionService {
         if (endTime == null) {
             endTime = LocalDateTime.now();
         }
-        return transactionRepository.findByFilters(startTime, endTime, type, tags, pageable);
+        String filteredType = (type == null || type.trim().isEmpty()) ? null : type;
+        String filteredTags = (tags == null || tags.trim().isEmpty()) ? null : tags;
+        return transactionRepository.findByFilters(startTime, endTime, filteredType, filteredTags, pageable);
     }
     
     public StatisticsDTO getStatistics(LocalDateTime startTime, LocalDateTime endTime) {
