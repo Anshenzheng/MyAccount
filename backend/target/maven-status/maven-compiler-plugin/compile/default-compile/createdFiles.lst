@@ -1,0 +1,11 @@
+com\myaccount\MyAccountApplication.class
+com\myaccount\config\WebConfig.class
+com\myaccount\controller\TransactionController.class
+com\myaccount\repository\TransactionRepository.class
+com\myaccount\dto\TransactionDTO.class
+com\myaccount\exception\GlobalExceptionHandler.class
+com\myaccount\dto\StatisticsDTO$CategoryStatistics.class
+com\myaccount\entity\Transaction.class
+com\myaccount\dto\StatisticsDTO$DailyStatistics.class
+com\myaccount\dto\StatisticsDTO.class
+com\myaccount\service\TransactionService.class
