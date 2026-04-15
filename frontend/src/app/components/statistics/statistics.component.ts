@@ -1,16 +1,17 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
-import { BaseChartDirective } from 'ng2-charts';
+import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { TransactionService } from '../../services/transaction.service';
 import { Statistics, CategoryStatistics } from '../../models/transaction.model';
 import { Subscription } from 'rxjs';
 
+Chart.register(...registerables);
+
 @Component({
   selector: 'app-statistics',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, BaseChartDirective],
+  imports: [CommonModule, ReactiveFormsModule],
   template: `
     <div class="statistics-container">
       <div class="card filter-card">
@@ -76,11 +77,7 @@ import { Subscription } from 'rxjs';
             <h3 class="card-title">📊 收支对比</h3>
           </div>
           <div class="chart-container">
-            <canvas baseChart
-              [type]="barChartType"
-              [data]="barChartData"
-              [options]="barChartOptions">
-            </canvas>
+            <canvas #barChartCanvas></canvas>
           </div>
         </div>
 
@@ -107,11 +104,7 @@ import { Subscription } from 'rxjs';
             </div>
           </div>
           <div class="chart-container">
-            <canvas baseChart
-              [type]="pieChartTypeChart"
-              [data]="pieChartData"
-              [options]="pieChartOptions">
-            </canvas>
+            <canvas #pieChartCanvas></canvas>
           </div>
           <div *ngIf="currentCategoryStats.length > 0" class="category-legend">
             <div *ngFor="let item of currentCategoryStats; let i = index" class="legend-item">
@@ -308,102 +301,26 @@ import { Subscription } from 'rxjs';
     }
   `]
 })
-export class StatisticsComponent implements OnInit, OnDestroy {
+export class StatisticsComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('barChartCanvas') barChartCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('pieChartCanvas') pieChartCanvas!: ElementRef<HTMLCanvasElement>;
+
   form: FormGroup;
   statistics?: Statistics;
   loading = false;
   pieChartType: 'income' | 'expense' = 'expense';
-  pieChartTypeChart: ChartType = 'doughnut';
-  barChartType: ChartType = 'bar';
   currentCategoryStats: CategoryStatistics[] = [];
 
+  private barChart?: Chart;
+  private pieChart?: Chart;
   private subscription?: Subscription;
+  private chartsInitialized = false;
 
   private colors = [
     '#3498db', '#e74c3c', '#27ae60', '#f39c12', '#9b59b6',
     '#1abc9c', '#e67e22', '#34495e', '#95a5a6', '#d35400',
     '#16a085', '#8e44ad', '#2c3e50', '#f1c40f', '#e91e63'
   ];
-
-  barChartData: ChartData<'bar'> = {
-    labels: [],
-    datasets: [
-      {
-        label: '收入',
-        data: [],
-        backgroundColor: 'rgba(39, 174, 96, 0.8)',
-        borderColor: 'rgba(39, 174, 96, 1)',
-        borderWidth: 1
-      },
-      {
-        label: '支出',
-        data: [],
-        backgroundColor: 'rgba(231, 76, 60, 0.8)',
-        borderColor: 'rgba(231, 76, 60, 1)',
-        borderWidth: 1
-      }
-    ]
-  };
-
-  barChartOptions: ChartConfiguration['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top',
-      },
-      tooltip: {
-        callbacks: {
-          label: (context) => `${context.dataset.label}: ¥${context.parsed.y.toFixed(2)}`
-        }
-      }
-    },
-    scales: {
-      x: {
-        ticks: {
-          maxRotation: 45,
-          minRotation: 45
-        }
-      },
-      y: {
-        beginAtZero: true,
-        ticks: {
-          callback: (value) => '¥' + value
-        }
-      }
-    }
-  };
-
-  pieChartData: ChartData<'doughnut'> = {
-    labels: [],
-    datasets: [{
-      data: [],
-      backgroundColor: [],
-      borderWidth: 2,
-      borderColor: '#fff'
-    }]
-  };
-
-  pieChartOptions: ChartConfiguration['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false
-      },
-      tooltip: {
-        callbacks: {
-          label: (context) => {
-            const label = context.label || '';
-            const value = context.parsed;
-            const total = context.dataset.data.reduce((a, b) => (a as number) + (b as number), 0) as number;
-            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
-            return `${label}: ¥${value.toFixed(2)} (${percentage}%)`;
-          }
-        }
-      }
-    }
-  };
 
   get pieChartColors(): string[] {
     return this.colors.slice(0, this.currentCategoryStats.length);
@@ -427,8 +344,15 @@ export class StatisticsComponent implements OnInit, OnDestroy {
     this.loadStatistics();
   }
 
+  ngAfterViewInit(): void {
+    this.chartsInitialized = true;
+    this.initCharts();
+  }
+
   ngOnDestroy(): void {
     this.subscription?.unsubscribe();
+    this.barChart?.destroy();
+    this.pieChart?.destroy();
   }
 
   onTimeRangeChange(): void {
@@ -485,8 +409,7 @@ export class StatisticsComponent implements OnInit, OnDestroy {
     this.subscription = this.transactionService.getStatistics(startTime, endTime).subscribe({
       next: (stats) => {
         this.statistics = stats;
-        this.updateBarChart(stats);
-        this.updatePieChart();
+        this.updateCharts();
         this.loading = false;
       },
       error: () => {
@@ -501,38 +424,85 @@ export class StatisticsComponent implements OnInit, OnDestroy {
     this.updatePieChart();
   }
 
-  private updateBarChart(stats: Statistics): void {
-    const dailyStats = stats.dailyStatistics || [];
-    
-    if (dailyStats.length === 0) {
-      this.barChartData.labels = ['暂无数据'];
-      this.barChartData.datasets[0].data = [0];
-      this.barChartData.datasets[1].data = [0];
-      return;
-    }
+  private initCharts(): void {
+    if (!this.chartsInitialized) return;
 
-    const labels = dailyStats.map(d => this.formatDateLabel(d.date));
-    const incomeData = dailyStats.map(d => d.income || 0);
-    const expenseData = dailyStats.map(d => d.expense || 0);
-
-    this.barChartData = {
-      ...this.barChartData,
-      labels,
-      datasets: [
-        { ...this.barChartData.datasets[0], data: incomeData },
-        { ...this.barChartData.datasets[1], data: expenseData }
-      ]
-    };
+    this.initBarChart();
+    this.initPieChart();
   }
 
-  private updatePieChart(): void {
-    if (!this.statistics) return;
+  private initBarChart(): void {
+    if (!this.barChartCanvas) return;
 
-    const categoryStats = this.statistics.categoryStatistics || [];
-    this.currentCategoryStats = categoryStats.filter(c => c.type === this.pieChartType);
+    const ctx = this.barChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
 
-    if (this.currentCategoryStats.length === 0) {
-      this.pieChartData = {
+    const config: ChartConfiguration = {
+      type: 'bar',
+      data: {
+        labels: ['暂无数据'],
+        datasets: [
+          {
+            label: '收入',
+            data: [0],
+            backgroundColor: 'rgba(39, 174, 96, 0.8)',
+            borderColor: 'rgba(39, 174, 96, 1)',
+            borderWidth: 1
+          },
+          {
+            label: '支出',
+            data: [0],
+            backgroundColor: 'rgba(231, 76, 60, 0.8)',
+            borderColor: 'rgba(231, 76, 60, 1)',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const value = context.parsed.y ?? 0;
+                return `${context.dataset.label}: ¥${value.toFixed(2)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              maxRotation: 45,
+              minRotation: 45
+            }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: (value) => '¥' + value
+            }
+          }
+        }
+      }
+    };
+
+    this.barChart = new Chart(ctx, config);
+  }
+
+  private initPieChart(): void {
+    if (!this.pieChartCanvas) return;
+
+    const ctx = this.pieChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
+
+    const config: ChartConfiguration = {
+      type: 'doughnut',
+      data: {
         labels: ['暂无数据'],
         datasets: [{
           data: [1],
@@ -540,23 +510,86 @@ export class StatisticsComponent implements OnInit, OnDestroy {
           borderWidth: 2,
           borderColor: '#fff'
         }]
-      };
-      return;
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const label = context.label || '';
+                const value = context.parsed;
+                const total = context.dataset.data.reduce((a, b) => (a as number) + (b as number), 0) as number;
+                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+                return `${label}: ¥${value.toFixed(2)} (${percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    this.pieChart = new Chart(ctx, config);
+  }
+
+  private updateCharts(): void {
+    if (!this.chartsInitialized || !this.statistics) return;
+
+    if (!this.barChart || !this.pieChart) {
+      this.initCharts();
     }
 
-    const labels = this.currentCategoryStats.map(c => c.category);
-    const data = this.currentCategoryStats.map(c => c.amount);
-    const colors = this.colors.slice(0, this.currentCategoryStats.length);
+    this.updateBarChart();
+    this.updatePieChart();
+  }
 
-    this.pieChartData = {
-      labels,
-      datasets: [{
-        data,
-        backgroundColor: colors,
-        borderWidth: 2,
-        borderColor: '#fff'
-      }]
-    };
+  private updateBarChart(): void {
+    if (!this.barChart || !this.statistics) return;
+
+    const dailyStats = this.statistics.dailyStatistics || [];
+    
+    if (dailyStats.length === 0) {
+      this.barChart.data.labels = ['暂无数据'];
+      this.barChart.data.datasets[0].data = [0];
+      this.barChart.data.datasets[1].data = [0];
+    } else {
+      const labels = dailyStats.map(d => this.formatDateLabel(d.date));
+      const incomeData = dailyStats.map(d => d.income || 0);
+      const expenseData = dailyStats.map(d => d.expense || 0);
+
+      this.barChart.data.labels = labels;
+      this.barChart.data.datasets[0].data = incomeData;
+      this.barChart.data.datasets[1].data = expenseData;
+    }
+
+    this.barChart.update();
+  }
+
+  private updatePieChart(): void {
+    if (!this.pieChart || !this.statistics) return;
+
+    const categoryStats = this.statistics.categoryStatistics || [];
+    this.currentCategoryStats = categoryStats.filter(c => c.type === this.pieChartType);
+
+    if (this.currentCategoryStats.length === 0) {
+      this.pieChart.data.labels = ['暂无数据'];
+      this.pieChart.data.datasets[0].data = [1];
+      this.pieChart.data.datasets[0].backgroundColor = ['#bdc3c7'];
+    } else {
+      const labels = this.currentCategoryStats.map(c => c.category);
+      const data = this.currentCategoryStats.map(c => c.amount);
+      const colors = this.colors.slice(0, this.currentCategoryStats.length);
+
+      this.pieChart.data.labels = labels;
+      this.pieChart.data.datasets[0].data = data;
+      this.pieChart.data.datasets[0].backgroundColor = colors;
+    }
+
+    this.pieChart.update();
   }
 
   private formatDate(date: Date): string {
