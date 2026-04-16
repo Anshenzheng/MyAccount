@@ -45,6 +45,14 @@ import { Subscription } from 'rxjs';
           >
             本年
           </button>
+          <div class="filter-divider"></div>
+          <button 
+            type="button" 
+            class="btn btn-export" 
+            (click)="exportTransactions()"
+          >
+            📥 导出
+          </button>
         </div>
         
         <form [formGroup]="filterForm" class="search-form">
@@ -69,9 +77,36 @@ import { Subscription } from 'rxjs';
           
           <div *ngIf="showAdvanced" class="advanced-section">
             <div class="search-row">
-              <div class="search-item">
-                <label class="search-label">标签</label>
-                <input type="text" formControlName="tags" class="form-control" placeholder="输入标签搜索">
+              <div class="search-item full-width">
+                <label class="search-label">标签（支持多选，多个标签用逗号分隔或点击下方标签选择）</label>
+                <div class="tags-search-container">
+                  <div class="selected-filter-tags">
+                    <span *ngFor="let tag of selectedFilterTags" class="tag-badge-small">
+                      {{ tag }}
+                      <button type="button" class="tag-remove-small" (click)="removeFilterTag(tag)">&times;</button>
+                    </span>
+                  </div>
+                  <input 
+                    type="text" 
+                    #tagSearchInput
+                    formControlName="tags"
+                    class="form-control tag-search-input"
+                    placeholder="输入标签后按回车添加"
+                    (keyup.enter)="addFilterTagFromInput(tagSearchInput)"
+                  >
+                </div>
+                <div *ngIf="existingTags.length > 0" class="existing-tags">
+                  <span class="hint">常用标签：</span>
+                  <button 
+                    type="button" 
+                    *ngFor="let tag of existingTags" 
+                    class="existing-tag-btn"
+                    [class.selected]="selectedFilterTags.includes(tag)"
+                    (click)="toggleFilterTag(tag)"
+                  >
+                    {{ tag }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -114,7 +149,7 @@ import { Subscription } from 'rxjs';
                 <span class="transaction-time">{{ formatDateTime(transaction.transactionTime) }}</span>
                 <span *ngIf="transaction.account" class="transaction-account">{{ transaction.account }}</span>
                 <span *ngIf="transaction.tags" class="transaction-tags">
-                  <span *ngFor="let tag of transaction.tags.split(',')" class="tag-badge-small">
+                  <span *ngFor="let tag of transaction.tags.split(',')" class="tag-badge-tiny">
                     {{ tag.trim() }}
                   </span>
                 </span>
@@ -242,9 +277,9 @@ import { Subscription } from 'rxjs';
 
     .search-bar {
       background: white;
-      border-radius: 12px;
+      border-radius: 16px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      padding: 1rem 1.5rem;
+      padding: 1.25rem;
       margin-bottom: 1.5rem;
     }
 
@@ -255,17 +290,19 @@ import { Subscription } from 'rxjs';
       margin-bottom: 1rem;
       padding-bottom: 1rem;
       border-bottom: 1px solid #ecf0f1;
+      align-items: center;
     }
 
     .quick-btn {
       padding: 0.5rem 1rem;
-      border: 1px solid #ecf0f1;
+      border: 1.5px solid #ecf0f1;
       background: white;
       border-radius: 20px;
       font-size: 0.9rem;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
       color: #7f8c8d;
+      font-weight: 500;
     }
 
     .quick-btn:hover {
@@ -274,6 +311,31 @@ import { Subscription } from 'rxjs';
     }
 
     .quick-btn.active {
+      background: #3498db;
+      color: white;
+      border-color: #3498db;
+    }
+
+    .filter-divider {
+      width: 1px;
+      height: 24px;
+      background: #ecf0f1;
+      margin: 0 0.25rem;
+    }
+
+    .btn-export {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      border-radius: 20px;
+      background: rgba(52, 152, 219, 0.1);
+      color: #3498db;
+      border: 1.5px solid rgba(52, 152, 219, 0.3);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+
+    .btn-export:hover {
       background: #3498db;
       color: white;
       border-color: #3498db;
@@ -298,21 +360,125 @@ import { Subscription } from 'rxjs';
       min-width: 140px;
     }
 
+    .search-item.full-width {
+      flex: 1;
+      min-width: auto;
+    }
+
     .search-label {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 500;
       color: #7f8c8d;
       margin-bottom: 0.35rem;
     }
 
     .search-item .form-control {
-      padding: 0.6rem 0.85rem;
+      padding: 0.55rem 0.85rem;
       font-size: 0.9rem;
+      border: 1.5px solid #ecf0f1;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .search-item .form-control:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
     }
 
     .advanced-section {
-      padding-top: 0.5rem;
+      padding-top: 0.75rem;
       border-top: 1px dashed #ecf0f1;
+    }
+
+    .tags-search-container {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      border: 1.5px solid #ecf0f1;
+      border-radius: 8px;
+      min-height: 46px;
+      transition: all 0.2s ease;
+    }
+
+    .tags-search-container:focus-within {
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .selected-filter-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .tag-badge-small {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.6rem;
+      background: #3498db;
+      color: white;
+      border-radius: 12px;
+      font-size: 0.8rem;
+    }
+
+    .tag-remove-small {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 0;
+      line-height: 1;
+      opacity: 0.8;
+    }
+
+    .tag-remove-small:hover {
+      opacity: 1;
+    }
+
+    .tag-search-input {
+      flex: 1;
+      min-width: 100px;
+      border: none;
+      outline: none;
+      padding: 0.35rem;
+      font-size: 0.9rem;
+      background: transparent;
+    }
+
+    .existing-tags {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #bdc3c7;
+    }
+
+    .existing-tag-btn {
+      padding: 0.2rem 0.6rem;
+      border: 1px solid #ecf0f1;
+      background: white;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #7f8c8d;
+    }
+
+    .existing-tag-btn:hover,
+    .existing-tag-btn.selected {
+      background: #3498db;
+      color: white;
+      border-color: #3498db;
     }
 
     .search-actions {
@@ -322,9 +488,105 @@ import { Subscription } from 'rxjs';
       flex-wrap: wrap;
     }
 
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: #3498db;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2980b9;
+    }
+
+    .btn-secondary {
+      background: #f8f9fa;
+      color: #7f8c8d;
+    }
+
+    .btn-secondary:hover {
+      background: #ecf0f1;
+      color: #2c3e50;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid #ecf0f1;
+      color: #7f8c8d;
+    }
+
+    .btn-outline:hover {
+      border-color: #3498db;
+      color: #3498db;
+    }
+
+    .btn-sm {
+      padding: 0.4rem 0.85rem;
+      font-size: 0.85rem;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin: 0;
+    }
+
     .record-count {
       color: #7f8c8d;
       font-size: 0.9rem;
+    }
+
+    .loading {
+      display: flex;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #ecf0f1;
+      border-top-color: #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty-state-text {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: #7f8c8d;
     }
 
     .transaction-list {
@@ -339,23 +601,23 @@ import { Subscription } from 'rxjs';
       gap: 1rem;
       padding: 1rem;
       background: #f8f9fa;
-      border-radius: 10px;
-      transition: all 0.3s ease;
+      border-radius: 12px;
+      transition: all 0.2s ease;
     }
 
     .transaction-item:hover {
-      background: #ebf5fb;
+      background: rgba(52, 152, 219, 0.05);
     }
 
     .transaction-icon {
-      width: 50px;
-      height: 50px;
+      width: 44px;
+      height: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: #e74c3c;
-      border-radius: 50%;
-      font-size: 1.5rem;
+      border-radius: 12px;
+      font-size: 1.25rem;
       flex-shrink: 0;
     }
 
@@ -379,7 +641,7 @@ import { Subscription } from 'rxjs';
       flex-wrap: wrap;
       gap: 0.5rem;
       align-items: center;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: #7f8c8d;
     }
 
@@ -401,16 +663,16 @@ import { Subscription } from 'rxjs';
       margin-left: 0.5rem;
     }
 
-    .tag-badge-small {
-      padding: 0.125rem 0.5rem;
-      background: #3498db;
-      color: white;
-      border-radius: 10px;
-      font-size: 0.75rem;
+    .tag-badge-tiny {
+      padding: 0.1rem 0.4rem;
+      background: rgba(52, 152, 219, 0.15);
+      color: #3498db;
+      border-radius: 8px;
+      font-size: 0.7rem;
     }
 
     .transaction-remark {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: #7f8c8d;
       margin-top: 0.25rem;
       font-style: italic;
@@ -423,10 +685,55 @@ import { Subscription } from 'rxjs';
       text-align: right;
     }
 
+    .text-income {
+      color: #27ae60;
+    }
+
+    .text-expense {
+      color: #e74c3c;
+    }
+
     .transaction-actions {
       display: flex;
       gap: 0.5rem;
       flex-shrink: 0;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #ecf0f1;
+    }
+
+    .pagination button {
+      padding: 0.5rem 1rem;
+      border: 1.5px solid #ecf0f1;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.85rem;
+      color: #7f8c8d;
+    }
+
+    .pagination button:hover:not(:disabled) {
+      border-color: #3498db;
+      color: #3498db;
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .page-info {
+      font-size: 0.9rem;
+      color: #7f8c8d;
+      font-weight: 500;
     }
 
     .modal-overlay {
@@ -445,7 +752,7 @@ import { Subscription } from 'rxjs';
 
     .modal {
       background: white;
-      border-radius: 12px;
+      border-radius: 16px;
       width: 100%;
       max-width: 500px;
       max-height: 90vh;
@@ -461,13 +768,14 @@ import { Subscription } from 'rxjs';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1.5rem;
+      padding: 1.25rem 1.5rem;
       border-bottom: 1px solid #ecf0f1;
     }
 
     .modal-header h3 {
       margin: 0;
-      font-size: 1.25rem;
+      font-size: 1.15rem;
+      color: #2c3e50;
     }
 
     .modal-close {
@@ -497,7 +805,7 @@ import { Subscription } from 'rxjs';
     .modal-actions {
       display: flex;
       gap: 1rem;
-      padding: 1.5rem;
+      padding: 1.25rem 1.5rem;
       border-top: 1px solid #ecf0f1;
     }
 
@@ -507,6 +815,25 @@ import { Subscription } from 'rxjs';
 
     form {
       padding: 1.5rem;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #7f8c8d;
+      margin-bottom: 0.35rem;
     }
 
     @media (max-width: 768px) {
@@ -544,6 +871,15 @@ import { Subscription } from 'rxjs';
       .quick-filters {
         justify-content: center;
       }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .pagination {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
     }
   `]
 })
@@ -555,6 +891,8 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   showAdvanced = false;
   activeQuickFilter: 'day' | 'week' | 'month' | 'year' | null = 'month';
   accounts: string[] = ['支付宝', '微信', '银行卡', '现金', '信用卡'];
+  existingTags: string[] = [];
+  selectedFilterTags: string[] = [];
 
   filterForm: FormGroup;
   editForm: FormGroup;
@@ -602,6 +940,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadTransactions();
     this.loadAccounts();
+    this.loadExistingTags();
   }
 
   ngOnDestroy(): void {
@@ -653,6 +992,32 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     this.loadTransactions(0);
   }
 
+  addFilterTagFromInput(input: HTMLInputElement): void {
+    const value = this.filterForm.get('tags')?.value?.trim();
+    if (value) {
+      const tags = value.split(',').map((t: string) => t.trim()).filter((t: string) => t);
+      tags.forEach((tag: string) => {
+        if (!this.selectedFilterTags.includes(tag)) {
+          this.selectedFilterTags.push(tag);
+        }
+      });
+      this.filterForm.get('tags')?.setValue('');
+      input.value = '';
+    }
+  }
+
+  toggleFilterTag(tag: string): void {
+    if (this.selectedFilterTags.includes(tag)) {
+      this.removeFilterTag(tag);
+    } else {
+      this.selectedFilterTags.push(tag);
+    }
+  }
+
+  removeFilterTag(tag: string): void {
+    this.selectedFilterTags = this.selectedFilterTags.filter(t => t !== tag);
+  }
+
   applyFilter(): void {
     this.activeQuickFilter = null;
     this.loadTransactions(0);
@@ -670,6 +1035,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     });
     this.activeQuickFilter = 'month';
     this.showAdvanced = false;
+    this.selectedFilterTags = [];
     this.loadTransactions(0);
   }
 
@@ -679,13 +1045,22 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     }
   }
 
+  private loadExistingTags(): void {
+    this.transactionService.getAllTags().subscribe({
+      next: (tags) => {
+        const allTags = tags.flatMap(t => t.split(',').map(s => s.trim()).filter(s => s));
+        this.existingTags = [...new Set(allTags)].slice(0, 15);
+      }
+    });
+  }
+
   private loadTransactions(page: number = 0): void {
     this.loading = true;
 
     const startDate = this.filterForm.get('startDate')?.value;
     const endDate = this.filterForm.get('endDate')?.value;
     const type = this.filterForm.get('type')?.value;
-    const tags = this.filterForm.get('tags')?.value;
+    const tags = this.selectedFilterTags.length > 0 ? this.selectedFilterTags.join(',') : undefined;
 
     let startTime: string | undefined;
     let endTime: string | undefined;
@@ -698,7 +1073,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     }
 
     this.subscription = this.transactionService.getTransactions(
-      page, this.pageSize, startTime, endTime, type || undefined, tags || undefined
+      page, this.pageSize, startTime, endTime, type || undefined, tags
     ).subscribe({
       next: (result) => {
         this.page = result;
@@ -785,6 +1160,79 @@ export class TransactionListComponent implements OnInit, OnDestroy {
         alert('删除失败');
       }
     });
+  }
+
+  exportTransactions(): void {
+    this.loadAllTransactionsForExport();
+  }
+
+  private loadAllTransactionsForExport(): void {
+    const startDate = this.filterForm.get('startDate')?.value;
+    const endDate = this.filterForm.get('endDate')?.value;
+    const type = this.filterForm.get('type')?.value;
+    const tags = this.selectedFilterTags.length > 0 ? this.selectedFilterTags.join(',') : undefined;
+
+    let startTime: string | undefined;
+    let endTime: string | undefined;
+
+    if (startDate) {
+      startTime = startDate + 'T00:00:00';
+    }
+    if (endDate) {
+      endTime = endDate + 'T23:59:59';
+    }
+
+    this.transactionService.getTransactions(
+      0, 1000, startTime, endTime, type || undefined, tags
+    ).subscribe({
+      next: (result) => {
+        this.generateCSV(result.content);
+      },
+      error: () => {
+        alert('导出失败，请重试');
+      }
+    });
+  }
+
+  private generateCSV(transactions: Transaction[]): void {
+    if (transactions.length === 0) {
+      alert('没有可导出的数据');
+      return;
+    }
+
+    const headers = ['日期', '时间', '类型', '分类', '金额', '账户', '标签', '备注'];
+    const rows = transactions.map(t => {
+      const dateTime = t.transactionTime ? new Date(t.transactionTime) : new Date();
+      const date = `${dateTime.getFullYear()}-${String(dateTime.getMonth() + 1).padStart(2, '0')}-${String(dateTime.getDate()).padStart(2, '0')}`;
+      const time = `${String(dateTime.getHours()).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`;
+      return [
+        date,
+        time,
+        t.type === 'income' ? '收入' : '支出',
+        t.category || '',
+        t.type === 'income' ? `+${t.amount}` : `-${t.amount}`,
+        t.account || '',
+        t.tags || '',
+        t.remark || ''
+      ];
+    });
+
+    const csvContent = '\uFEFF' + [headers, ...rows].map(row => 
+      row.map(cell => `"${cell}"`).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `账单导出_${dateStr}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   getCategoryIcon(category: string, type: string): string {
