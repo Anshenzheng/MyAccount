@@ -16,28 +16,28 @@ Chart.register(...registerables);
     <div class="statistics-container">
       <div class="search-bar">
         <form [formGroup]="form" class="search-form">
-          <div class="search-item">
-            <label class="search-label">时间范围</label>
-            <select formControlName="timeRange" class="form-control" (change)="onTimeRangeChange()">
-              <option value="day">今天</option>
-              <option value="week">本周</option>
-              <option value="month">本月</option>
-              <option value="year">本年</option>
-              <option value="custom">自定义</option>
-            </select>
-          </div>
-          
-          <div *ngIf="isCustomRange" class="search-item">
-            <label class="search-label">开始日期</label>
-            <input type="date" formControlName="startDate" class="form-control">
-          </div>
-          
-          <div *ngIf="isCustomRange" class="search-item">
-            <label class="search-label">结束日期</label>
-            <input type="date" formControlName="endDate" class="form-control">
-          </div>
-          
-          <div class="search-actions">
+          <div class="search-inline">
+            <div class="search-group">
+              <span class="search-label">时间范围</span>
+              <select formControlName="timeRange" class="form-control" (change)="onTimeRangeChange()">
+                <option value="day">今天</option>
+                <option value="week">本周</option>
+                <option value="month">本月</option>
+                <option value="year">本年</option>
+                <option value="custom">自定义</option>
+              </select>
+            </div>
+            
+            <div *ngIf="isCustomRange" class="search-group">
+              <span class="search-label">开始</span>
+              <input type="date" formControlName="startDate" class="form-control">
+            </div>
+            
+            <div *ngIf="isCustomRange" class="search-group">
+              <span class="search-label">结束</span>
+              <input type="date" formControlName="endDate" class="form-control">
+            </div>
+            
             <button type="button" class="btn btn-primary" (click)="loadStatistics()">查询</button>
           </div>
         </form>
@@ -132,39 +132,39 @@ Chart.register(...registerables);
       background: white;
       border-radius: 12px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      padding: 1rem 1.5rem;
+      padding: 0.75rem 1.25rem;
       margin-bottom: 1.5rem;
     }
 
-    .search-form {
+    .search-inline {
       display: flex;
       flex-wrap: wrap;
-      gap: 1rem;
-      align-items: flex-end;
+      gap: 0.75rem;
+      align-items: center;
     }
 
-    .search-item {
+    .search-group {
       display: flex;
-      flex-direction: column;
-      min-width: 140px;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     .search-label {
       font-size: 0.85rem;
       font-weight: 500;
       color: #7f8c8d;
-      margin-bottom: 0.35rem;
+      white-space: nowrap;
     }
 
-    .search-item .form-control {
-      padding: 0.6rem 0.85rem;
-      font-size: 0.9rem;
+    .search-group .form-control {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      min-width: 100px;
     }
 
-    .search-actions {
-      display: flex;
-      gap: 0.5rem;
-      align-items: flex-end;
+    .search-inline .btn {
+      padding: 0.5rem 1.25rem;
+      font-size: 0.85rem;
     }
 
     .summary-cards {
@@ -313,12 +313,18 @@ Chart.register(...registerables);
         gap: 1rem;
       }
 
-      .search-form {
+      .search-inline {
         flex-direction: column;
         align-items: stretch;
       }
 
-      .search-item {
+      .search-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.25rem;
+      }
+
+      .search-group .form-control {
         min-width: auto;
       }
     }

@@ -10,151 +10,160 @@ import { Transaction } from '../../models/transaction.model';
   imports: [CommonModule, ReactiveFormsModule],
   template: `
     <div class="form-container">
-      <div class="form-main">
-        <div class="card">
-          <div class="card-header">
-            <h2 class="card-title">📝 记一笔</h2>
-          </div>
-          
-          <div class="type-toggle">
-            <button 
-              type="button" 
-              class="type-btn" 
-              [class.active]="form.get('type')?.value === 'expense'"
-              (click)="setType('expense')"
-            >
-              支出
-            </button>
-            <button 
-              type="button" 
-              class="type-btn" 
-              [class.active]="form.get('type')?.value === 'income'"
-              (click)="setType('income')"
-            >
-              收入
-            </button>
+      <div class="main-card">
+        <div class="form-header">
+          <h2 class="card-title">📝 记一笔</h2>
+        </div>
+        
+        <div class="type-segment">
+          <button 
+            type="button" 
+            class="segment-btn" 
+            [class.active]="form.get('type')?.value === 'expense'"
+            (click)="setType('expense')"
+          >
+            支出
+          </button>
+          <button 
+            type="button" 
+            class="segment-btn" 
+            [class.active]="form.get('type')?.value === 'income'"
+            (click)="setType('income')"
+          >
+            收入
+          </button>
+        </div>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+          <div class="amount-center">
+            <div class="amount-label">金额</div>
+            <div class="amount-input-group">
+              <span class="currency-symbol">¥</span>
+              <input 
+                type="number" 
+                formControlName="amount" 
+                class="amount-input"
+                placeholder="0.00"
+                step="0.01"
+                min="0.01"
+                autofocus
+              >
+            </div>
+            <div *ngIf="form.get('amount')?.invalid && form.get('amount')?.touched" class="amount-error">
+              请输入有效金额
+            </div>
           </div>
 
-          <form [formGroup]="form" (ngSubmit)="onSubmit()">
-            <div class="form-grid">
-              <div class="form-left">
-                <div class="amount-section">
-                  <span class="currency-symbol">¥</span>
-                  <input 
-                    type="number" 
-                    formControlName="amount" 
-                    class="amount-input"
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0.01"
+          <div class="form-section">
+            <div class="section-row">
+              <div class="form-item">
+                <label class="form-label">分类</label>
+                <div class="category-grid">
+                  <button 
+                    type="button" 
+                    *ngFor="let cat of categories" 
+                    class="category-btn"
+                    [class.active]="form.get('category')?.value === cat"
+                    (click)="selectCategory(cat)"
                   >
+                    <span class="cat-icon">{{ getCategoryIcon(cat) }}</span>
+                    <span class="cat-name">{{ cat }}</span>
+                  </button>
                 </div>
-                <div *ngIf="form.get('amount')?.invalid && form.get('amount')?.touched" class="error-message">
-                  请输入有效金额
-                </div>
-
-                <div class="quick-categories">
-                  <div class="section-label">快捷分类</div>
-                  <div class="category-grid">
-                    <button 
-                      type="button" 
-                      *ngFor="let cat of categories" 
-                      class="category-btn"
-                      [class.active]="form.get('category')?.value === cat"
-                      (click)="selectCategory(cat)"
-                    >
-                      {{ getCategoryIcon(cat) }} {{ cat }}
-                    </button>
-                  </div>
-                </div>
-                <div *ngIf="form.get('category')?.invalid && form.get('category')?.touched" class="error-message">
+                <div *ngIf="form.get('category')?.invalid && form.get('category')?.touched" class="field-error">
                   请选择分类
                 </div>
               </div>
+            </div>
 
-              <div class="form-right">
-                <div class="form-group">
-                  <label class="form-label">时间</label>
-                  <input type="datetime-local" formControlName="transactionTime" class="form-control">
-                </div>
+            <div class="section-row two-col">
+              <div class="form-item">
+                <label class="form-label">时间</label>
+                <input type="datetime-local" formControlName="transactionTime" class="form-control">
+              </div>
+              <div class="form-item">
+                <label class="form-label">账户</label>
+                <select formControlName="account" class="form-control">
+                  <option value="">请选择</option>
+                  <option *ngFor="let acc of accounts" [value]="acc">{{ acc }}</option>
+                </select>
+              </div>
+            </div>
 
-                <div class="form-group">
-                  <label class="form-label">账户</label>
-                  <select formControlName="account" class="form-control">
-                    <option value="">请选择账户</option>
-                    <option *ngFor="let acc of accounts" [value]="acc">{{ acc }}</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">标签</label>
-                  <div class="tags-input-container">
-                    <div class="selected-tags">
-                      <span *ngFor="let tag of selectedTags" class="tag-badge">
-                        {{ tag }}
-                        <button type="button" class="tag-remove" (click)="removeTag(tag)">&times;</button>
-                      </span>
-                    </div>
-                    <input 
-                      type="text" 
-                      #tagInput
-                      [formControl]="tagControl"
-                      class="form-control tag-input"
-                      placeholder="输入标签后按回车添加"
-                      (keyup.enter)="addTag(tagInput)"
-                    >
-                  </div>
-                  <div *ngIf="existingTags.length > 0" class="existing-tags">
-                    <span class="hint">常用标签：</span>
-                    <button 
-                      type="button" 
-                      *ngFor="let tag of existingTags" 
-                      class="existing-tag-btn"
-                      (click)="toggleExistingTag(tag)"
-                    >
+            <div class="section-row">
+              <div class="form-item">
+                <label class="form-label">标签</label>
+                <div class="tags-input-container">
+                  <div class="selected-tags">
+                    <span *ngFor="let tag of selectedTags" class="tag-badge">
                       {{ tag }}
-                    </button>
+                      <button type="button" class="tag-remove" (click)="removeTag(tag)">&times;</button>
+                    </span>
                   </div>
+                  <input 
+                    type="text" 
+                    #tagInput
+                    [formControl]="tagControl"
+                    class="form-control tag-input"
+                    placeholder="输入标签后按回车添加"
+                    (keyup.enter)="addTag(tagInput)"
+                  >
                 </div>
-
-                <div class="form-group">
-                  <label class="form-label">备注</label>
-                  <textarea formControlName="remark" class="form-control" rows="2" placeholder="添加备注..."></textarea>
-                </div>
-
-                <div class="form-actions">
-                  <button type="button" class="btn btn-secondary" (click)="resetForm()">重置</button>
-                  <button type="submit" class="btn btn-primary" [disabled]="form.invalid || loading">
-                    {{ loading ? '保存中...' : '保存' }}
+                <div *ngIf="existingTags.length > 0" class="existing-tags">
+                  <span class="hint">常用：</span>
+                  <button 
+                    type="button" 
+                    *ngFor="let tag of existingTags" 
+                    class="existing-tag-btn"
+                    [class.selected]="selectedTags.includes(tag)"
+                    (click)="toggleExistingTag(tag)"
+                  >
+                    {{ tag }}
                   </button>
                 </div>
               </div>
             </div>
-          </form>
 
-          <div *ngIf="showSuccess" class="success-toast">
-            ✅ 保存成功！
+            <div class="section-row">
+              <div class="form-item">
+                <label class="form-label">备注</label>
+                <textarea formControlName="remark" class="form-control" rows="2" placeholder="添加备注..."></textarea>
+              </div>
+            </div>
           </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" (click)="resetForm()">重置</button>
+            <button type="submit" class="btn btn-primary" [disabled]="form.invalid || loading">
+              {{ loading ? '保存中...' : '保存' }}
+            </button>
+          </div>
+        </form>
+
+        <div *ngIf="showSuccess" class="success-toast">
+          ✅ 保存成功！
         </div>
       </div>
 
-      <div class="form-sidebar">
-        <div class="card quick-entries-card">
-          <div class="card-header">
-            <h2 class="card-title">⚡ 快捷录入</h2>
-          </div>
-          <div class="quick-entries">
-            <button 
-              type="button" 
-              *ngFor="let entry of quickEntries" 
-              class="quick-entry-btn"
-              (click)="quickEntry(entry)"
-            >
-              <span class="quick-entry-icon">{{ entry.icon }}</span>
-              <span class="quick-entry-name">{{ entry.name }}</span>
-              <span class="quick-entry-amount">{{ entry.type === 'income' ? '+' : '-' }}¥{{ entry.amount }}</span>
-            </button>
-          </div>
+      <div class="quick-card">
+        <div class="quick-header">
+          <h3 class="quick-title">⚡ 快捷录入</h3>
+        </div>
+        <div class="quick-list">
+          <button 
+            type="button" 
+            *ngFor="let entry of quickEntries" 
+            class="quick-item"
+            (click)="quickEntry(entry)"
+          >
+            <span class="quick-icon">{{ entry.icon }}</span>
+            <span class="quick-info">
+              <span class="quick-name">{{ entry.name }}</span>
+              <span class="quick-amount" [class.income]="entry.type === 'income'">
+                {{ entry.type === 'income' ? '+' : '-' }}¥{{ entry.amount }}
+              </span>
+            </span>
+          </button>
         </div>
       </div>
     </div>
@@ -164,134 +173,216 @@ import { Transaction } from '../../models/transaction.model';
       max-width: 1400px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: 1fr 320px;
+      grid-template-columns: 1fr 300px;
       gap: 1.5rem;
     }
 
-    .form-main {
-      grid-column: 1;
+    .main-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 1.5rem;
     }
 
-    .form-sidebar {
-      grid-column: 2;
+    .form-header {
+      margin-bottom: 1rem;
     }
 
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin: 0;
     }
 
-    .form-left {
-      grid-column: 1;
-    }
-
-    .form-right {
-      grid-column: 2;
-    }
-
-    .quick-entries-card {
-      position: sticky;
-      top: 1.5rem;
-    }
-
-    .type-toggle {
-      display: flex;
-      gap: 1rem;
+    .type-segment {
+      display: inline-flex;
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 4px;
       margin-bottom: 1.5rem;
     }
 
-    .type-btn {
-      flex: 1;
-      padding: 1rem;
-      border: 2px solid #ecf0f1;
-      background: white;
-      border-radius: 12px;
-      font-size: 1.1rem;
-      font-weight: 600;
+    .segment-btn {
+      padding: 0.5rem 1.5rem;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
+      color: #7f8c8d;
     }
 
-    .type-btn.active {
-      border-color: #3498db;
+    .segment-btn.active {
       background: #3498db;
       color: white;
+      box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
     }
 
-    .type-btn:hover:not(.active) {
-      border-color: #bdc3c7;
+    .segment-btn:not(.active):hover {
+      color: #3498db;
     }
 
-    .amount-section {
-      display: flex;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      padding: 1rem;
-      background: #f8f9fa;
+    .amount-center {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, rgba(52, 152, 219, 0.05) 0%, rgba(52, 152, 219, 0.1) 100%);
       border-radius: 12px;
+    }
+
+    .amount-label {
+      font-size: 0.85rem;
+      color: #7f8c8d;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .amount-input-group {
+      display: inline-flex;
+      align-items: baseline;
+      justify-content: center;
     }
 
     .currency-symbol {
-      font-size: 2rem;
+      font-size: 2.5rem;
       font-weight: 600;
       color: #3498db;
-      margin-right: 0.5rem;
+      margin-right: 0.25rem;
     }
 
     .amount-input {
-      flex: 1;
-      font-size: 2rem;
-      font-weight: 600;
+      font-size: 3rem;
+      font-weight: 700;
       border: none;
       background: transparent;
       outline: none;
       color: #2c3e50;
+      width: 300px;
+      text-align: center;
+      padding: 0;
     }
 
     .amount-input::placeholder {
       color: #bdc3c7;
     }
 
-    .quick-categories {
-      margin-bottom: 1.5rem;
+    .amount-error {
+      color: #e74c3c;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
     }
 
-    .section-label {
-      font-weight: 600;
-      color: #34495e;
-      margin-bottom: 0.75rem;
+    .form-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .section-row {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .section-row.two-col .form-item {
+      flex: 1;
+    }
+
+    .form-item {
+      flex: 1;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #7f8c8d;
+      margin-bottom: 0.35rem;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 0.6rem 0.85rem;
+      border: 1.5px solid #ecf0f1;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+      background: white;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    select.form-control {
+      cursor: pointer;
+    }
+
+    textarea.form-control {
+      resize: vertical;
+      min-height: 60px;
     }
 
     .category-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+      gap: 0.5rem;
     }
 
     .category-btn {
-      padding: 0.75rem;
-      border: 2px solid #ecf0f1;
-      background: white;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 0.25rem;
+      padding: 0.75rem 0.5rem;
+      border: 1.5px solid #ecf0f1;
+      background: white;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #7f8c8d;
     }
 
     .category-btn:hover {
       border-color: #3498db;
-      background: #ebf5fb;
+      background: rgba(52, 152, 219, 0.05);
     }
 
     .category-btn.active {
       border-color: #3498db;
-      background: #3498db;
-      color: white;
+      background: rgba(52, 152, 219, 0.1);
+      color: #3498db;
+    }
+
+    .cat-icon {
+      font-size: 1.5rem;
+      background: #f8f9fa;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .category-btn.active .cat-icon {
+      background: rgba(52, 152, 219, 0.15);
+    }
+
+    .cat-name {
+      font-weight: 500;
+    }
+
+    .field-error {
+      color: #e74c3c;
+      font-size: 0.8rem;
+      margin-top: 0.25rem;
     }
 
     .tags-input-container {
@@ -300,9 +391,10 @@ import { Transaction } from '../../models/transaction.model';
       align-items: center;
       gap: 0.5rem;
       padding: 0.5rem;
-      border: 2px solid #ecf0f1;
+      border: 1.5px solid #ecf0f1;
       border-radius: 8px;
-      min-height: 50px;
+      min-height: 46px;
+      transition: all 0.2s ease;
     }
 
     .tags-input-container:focus-within {
@@ -313,18 +405,18 @@ import { Transaction } from '../../models/transaction.model';
     .selected-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 0.35rem;
     }
 
     .tag-badge {
       display: inline-flex;
       align-items: center;
       gap: 0.25rem;
-      padding: 0.25rem 0.75rem;
+      padding: 0.25rem 0.6rem;
       background: #3498db;
       color: white;
-      border-radius: 20px;
-      font-size: 0.85rem;
+      border-radius: 16px;
+      font-size: 0.8rem;
     }
 
     .tag-remove {
@@ -335,6 +427,11 @@ import { Transaction } from '../../models/transaction.model';
       font-size: 1rem;
       padding: 0;
       line-height: 1;
+      opacity: 0.8;
+    }
+
+    .tag-remove:hover {
+      opacity: 1;
     }
 
     .tag-input {
@@ -342,8 +439,9 @@ import { Transaction } from '../../models/transaction.model';
       min-width: 100px;
       border: none;
       outline: none;
-      padding: 0.5rem;
-      font-size: 0.95rem;
+      padding: 0.35rem;
+      font-size: 0.9rem;
+      background: transparent;
     }
 
     .existing-tags {
@@ -351,25 +449,27 @@ import { Transaction } from '../../models/transaction.model';
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.35rem;
     }
 
     .hint {
-      font-size: 0.85rem;
-      color: #7f8c8d;
+      font-size: 0.8rem;
+      color: #bdc3c7;
     }
 
     .existing-tag-btn {
-      padding: 0.25rem 0.75rem;
-      border: 1px solid #bdc3c7;
+      padding: 0.2rem 0.6rem;
+      border: 1px solid #ecf0f1;
       background: white;
-      border-radius: 15px;
-      font-size: 0.8rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
       cursor: pointer;
       transition: all 0.2s ease;
+      color: #7f8c8d;
     }
 
-    .existing-tag-btn:hover {
+    .existing-tag-btn:hover,
+    .existing-tag-btn.selected {
       background: #3498db;
       color: white;
       border-color: #3498db;
@@ -379,29 +479,68 @@ import { Transaction } from '../../models/transaction.model';
       display: flex;
       gap: 1rem;
       margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #ecf0f1;
     }
 
     .form-actions .btn {
       flex: 1;
+      padding: 0.85rem;
+      font-size: 1rem;
     }
 
-    .error-message {
-      color: #e74c3c;
-      font-size: 0.85rem;
-      margin-top: 0.25rem;
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: #3498db;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #2980b9;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #f8f9fa;
+      color: #7f8c8d;
+    }
+
+    .btn-secondary:hover {
+      background: #ecf0f1;
+      color: #2c3e50;
     }
 
     .success-toast {
       position: fixed;
-      top: 100px;
+      top: 80px;
       right: 20px;
       background: #27ae60;
       color: white;
-      padding: 1rem 1.5rem;
+      padding: 0.85rem 1.25rem;
       border-radius: 8px;
       font-weight: 500;
       animation: slideIn 0.3s ease;
       z-index: 1000;
+      box-shadow: 0 4px 20px rgba(39, 174, 96, 0.3);
     }
 
     @keyframes slideIn {
@@ -415,51 +554,90 @@ import { Transaction } from '../../models/transaction.model';
       }
     }
 
-    .quick-entries {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 0.75rem;
+    .quick-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 1.25rem;
+      position: sticky;
+      top: 1.5rem;
     }
 
-    .quick-entry-btn {
+    .quick-header {
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #ecf0f1;
+    }
+
+    .quick-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin: 0;
+    }
+
+    .quick-list {
       display: flex;
       flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .quick-item {
+      display: flex;
       align-items: center;
-      gap: 0.25rem;
-      padding: 1rem;
-      border: 2px solid #ecf0f1;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border: 1px solid #ecf0f1;
       background: white;
-      border-radius: 12px;
+      border-radius: 10px;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
+      text-align: left;
     }
 
-    .quick-entry-btn:hover {
+    .quick-item:hover {
       border-color: #3498db;
-      background: #ebf5fb;
-      transform: translateY(-2px);
+      background: rgba(52, 152, 219, 0.03);
+      transform: translateX(4px);
     }
 
-    .quick-entry-icon {
+    .quick-icon {
       font-size: 1.5rem;
+      background: #f8f9fa;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
-    .quick-entry-name {
+    .quick-item:hover .quick-icon {
+      background: rgba(52, 152, 219, 0.1);
+    }
+
+    .quick-info {
+      flex: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .quick-name {
       font-size: 0.9rem;
-      color: #34495e;
+      font-weight: 500;
+      color: #2c3e50;
     }
 
-    .quick-entry-amount {
+    .quick-amount {
       font-size: 0.85rem;
       font-weight: 600;
-    }
-
-    .quick-entry-amount:not([class*="income"]) {
       color: #e74c3c;
     }
 
-    .quick-entry-amount[class*="income"],
-    .quick-entry-btn .quick-entry-amount:first-child {
+    .quick-amount.income {
       color: #27ae60;
     }
 
@@ -468,31 +646,38 @@ import { Transaction } from '../../models/transaction.model';
         grid-template-columns: 1fr;
       }
 
-      .form-sidebar {
-        grid-column: 1;
+      .quick-card {
+        position: static;
       }
 
-      .quick-entries-card {
-        position: static;
+      .quick-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
       }
     }
 
     @media (max-width: 768px) {
-      .form-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-      }
-
-      .form-right {
-        grid-column: 1;
+      .section-row {
+        flex-direction: column;
+        gap: 0.75rem;
       }
 
       .category-grid {
         grid-template-columns: repeat(3, 1fr);
       }
 
-      .quick-entries {
-        grid-template-columns: repeat(2, 1fr);
+      .amount-input {
+        font-size: 2rem;
+        width: 200px;
+      }
+
+      .currency-symbol {
+        font-size: 2rem;
+      }
+
+      .quick-list {
+        grid-template-columns: 1fr;
       }
     }
   `]
