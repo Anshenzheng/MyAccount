@@ -21,7 +21,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Page<Transaction> findByTypeAndTransactionTimeBetweenOrderByTransactionTimeDesc(
             String type, LocalDateTime startTime, LocalDateTime endTime, Pageable pageable);
     
-    @Query(value = "SELECT * FROM transaction t WHERE t.transaction_time BETWEEN :startTime AND :endTime " +
+    @Query(value = "SELECT * FROM transactions t WHERE t.transaction_time BETWEEN :startTime AND :endTime " +
            "AND (:type IS NULL OR t.type = :type) " +
            "AND (:tags IS NULL OR EXISTS (" +
            "  SELECT 1 FROM (" +
