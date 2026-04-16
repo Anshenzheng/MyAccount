@@ -14,10 +14,10 @@ Chart.register(...registerables);
   imports: [CommonModule, ReactiveFormsModule],
   template: `
     <div class="statistics-container">
-      <div class="card filter-card">
-        <div class="filter-section">
-          <div class="form-group">
-            <label class="form-label">时间范围</label>
+      <div class="search-bar">
+        <form [formGroup]="form" class="search-form">
+          <div class="search-item">
+            <label class="search-label">时间范围</label>
             <select formControlName="timeRange" class="form-control" (change)="onTimeRangeChange()">
               <option value="day">今天</option>
               <option value="week">本周</option>
@@ -27,20 +27,20 @@ Chart.register(...registerables);
             </select>
           </div>
           
-          <div *ngIf="isCustomRange" class="form-group">
-            <label class="form-label">开始日期</label>
+          <div *ngIf="isCustomRange" class="search-item">
+            <label class="search-label">开始日期</label>
             <input type="date" formControlName="startDate" class="form-control">
           </div>
           
-          <div *ngIf="isCustomRange" class="form-group">
-            <label class="form-label">结束日期</label>
+          <div *ngIf="isCustomRange" class="search-item">
+            <label class="search-label">结束日期</label>
             <input type="date" formControlName="endDate" class="form-control">
           </div>
           
-          <div class="filter-actions">
+          <div class="search-actions">
             <button type="button" class="btn btn-primary" (click)="loadStatistics()">查询</button>
           </div>
-        </div>
+        </form>
       </div>
 
       <div class="summary-cards">
@@ -128,20 +128,43 @@ Chart.register(...registerables);
       margin: 0 auto;
     }
 
-    .filter-card {
+    .search-bar {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 1rem 1.5rem;
       margin-bottom: 1.5rem;
     }
 
-    .filter-section {
+    .search-form {
       display: flex;
       flex-wrap: wrap;
       gap: 1rem;
       align-items: flex-end;
     }
 
-    .filter-section .form-group {
-      margin-bottom: 0;
-      min-width: 150px;
+    .search-item {
+      display: flex;
+      flex-direction: column;
+      min-width: 140px;
+    }
+
+    .search-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #7f8c8d;
+      margin-bottom: 0.35rem;
+    }
+
+    .search-item .form-control {
+      padding: 0.6rem 0.85rem;
+      font-size: 0.9rem;
+    }
+
+    .search-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
     }
 
     .summary-cards {
@@ -290,12 +313,12 @@ Chart.register(...registerables);
         gap: 1rem;
       }
 
-      .filter-section {
+      .search-form {
         flex-direction: column;
         align-items: stretch;
       }
 
-      .filter-section .form-group {
+      .search-item {
         min-width: auto;
       }
     }
