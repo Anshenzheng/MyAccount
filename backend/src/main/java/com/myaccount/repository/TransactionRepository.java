@@ -23,7 +23,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     
     @Query("SELECT t FROM Transaction t WHERE t.transactionTime BETWEEN :startTime AND :endTime " +
            "AND (:type IS NULL OR t.type = :type) " +
-           "AND (:tags IS NULL OR t.tags LIKE CONCAT('%', :tags, '%')) " +
+           "AND (:tags IS NULL OR " +
+           "  EXISTS (SELECT 1 FROM Transaction t2 " +
+           "           WHERE t2.id = t.id " +
+           "           AND (t2.tags LIKE CONCAT('%', :tags, '%') " +
+           "                OR t2.tags LIKE CONCAT('%', :tags, ',%') " +
+           "                OR t2.tags LIKE CONCAT('%,', :tags, '%') " +
+           "                OR t2.tags LIKE CONCAT('%,', :tags, ',%')))) " +
            "ORDER BY t.transactionTime DESC")
     Page<Transaction> findByFilters(
             @Param("startTime") LocalDateTime startTime,
