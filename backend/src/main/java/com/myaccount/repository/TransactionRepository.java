@@ -21,16 +21,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Page<Transaction> findByTypeAndTransactionTimeBetweenOrderByTransactionTimeDesc(
             String type, LocalDateTime startTime, LocalDateTime endTime, Pageable pageable);
     
-    @Query("SELECT t FROM Transaction t WHERE t.transactionTime BETWEEN :startTime AND :endTime " +
+    @Query(value = "SELECT * FROM transaction t WHERE t.transaction_time BETWEEN :startTime AND :endTime " +
            "AND (:type IS NULL OR t.type = :type) " +
-           "AND (:tags IS NULL OR " +
-           "  EXISTS (SELECT 1 FROM Transaction t2 " +
-           "           WHERE t2.id = t.id " +
-           "           AND (t2.tags LIKE CONCAT('%', :tags, '%') " +
-           "                OR t2.tags LIKE CONCAT('%', :tags, ',%') " +
-           "                OR t2.tags LIKE CONCAT('%,', :tags, '%') " +
-           "                OR t2.tags LIKE CONCAT('%,', :tags, ',%')))) " +
-           "ORDER BY t.transactionTime DESC")
+           "AND (:tags IS NULL OR EXISTS (" +
+           "  SELECT 1 FROM (" +
+           "    SELECT TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(:tags, ',', n), ',', -1)) AS tag " +
+           "    FROM (SELECT 1 AS n UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 " +
+           "          UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 UNION SELECT 10) nums " +
+           "    WHERE n <= LENGTH(:tags) - LENGTH(REPLACE(:tags, ',', '')) + 1" +
+           "  ) split_tags " +
+           "  WHERE FIND_IN_SET(split_tags.tag, REPLACE(t.tags, ' ', '')) > 0" +
+           ")) " +
+           "ORDER BY t.transaction_time DESC", nativeQuery = true)
     Page<Transaction> findByFilters(
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime,

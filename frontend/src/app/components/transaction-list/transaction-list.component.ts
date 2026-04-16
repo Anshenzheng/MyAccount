@@ -45,14 +45,6 @@ import { Subscription } from 'rxjs';
           >
             本年
           </button>
-          <div class="filter-divider"></div>
-          <button 
-            type="button" 
-            class="btn btn-export" 
-            (click)="exportTransactions()"
-          >
-            📥 导出
-          </button>
         </div>
         
         <form [formGroup]="filterForm" class="search-form">
@@ -124,10 +116,20 @@ import { Subscription } from 'rxjs';
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">📋 收支明细</h3>
-          <span class="record-count">共 {{ page?.totalElements || 0 }} 条记录</span>
+          <div class="card-header-right">
+            <span class="record-count">共 {{ page?.totalElements || 0 }} 条记录</span>
+            <button 
+              *ngIf="transactions && transactions.length > 0"
+              type="button" 
+              class="btn btn-export-small" 
+              (click)="exportTransactions()"
+            >
+              📥 导出
+            </button>
+          </div>
         </div>
 
-        <div *ngIf="loading" class="loading">
+        <div *ngIf="loading && transactions.length === 0" class="loading">
           <div class="spinner"></div>
         </div>
 
@@ -137,56 +139,65 @@ import { Subscription } from 'rxjs';
           <p style="margin-top: 0.5rem; color: #7f8c8d;">去记一笔开始你的记账之旅吧</p>
         </div>
 
-        <div *ngIf="!loading && transactions && transactions.length > 0" class="transaction-list">
-          <div *ngFor="let transaction of transactions" class="transaction-item">
-            <div class="transaction-icon" [class.income]="transaction.type === 'income'">
-              {{ getCategoryIcon(transaction.category, transaction.type) }}
-            </div>
-            
-            <div class="transaction-info">
-              <div class="transaction-category">{{ transaction.category }}</div>
-              <div class="transaction-meta">
-                <span class="transaction-time">{{ formatDateTime(transaction.transactionTime) }}</span>
-                <span *ngIf="transaction.account" class="transaction-account">{{ transaction.account }}</span>
-                <span *ngIf="transaction.tags" class="transaction-tags">
-                  <span *ngFor="let tag of transaction.tags.split(',')" class="tag-badge-tiny">
-                    {{ tag.trim() }}
-                  </span>
-                </span>
-              </div>
-              <div *ngIf="transaction.remark" class="transaction-remark">
-                {{ transaction.remark }}
-              </div>
-            </div>
-            
-            <div class="transaction-amount">
-              <span [class.text-income]="transaction.type === 'income'" 
-                    [class.text-expense]="transaction.type === 'expense'">
-                {{ transaction.type === 'income' ? '+' : '-' }}¥{{ transaction.amount | number:'1.2-2' }}
+        <div *ngIf="!loading && groupedTransactions && groupedTransactions.length > 0" class="transaction-list-scroll" #scrollContainer (scroll)="onScroll($event)">
+          <div *ngFor="let group of groupedTransactions" class="date-group">
+            <div class="date-group-header">
+              <span class="date-label">{{ formatDateLabel(group.date) }}</span>
+              <span class="date-summary">
+                <span *ngIf="group.income > 0" class="income-text">收入: +¥{{ group.income | number:'1.2-2' }}</span>
+                <span *ngIf="group.income > 0 && group.expense > 0" class="summary-divider">|</span>
+                <span *ngIf="group.expense > 0" class="expense-text">支出: -¥{{ group.expense | number:'1.2-2' }}</span>
               </span>
             </div>
-            
-            <div class="transaction-actions">
-              <button type="button" class="btn btn-sm btn-secondary" (click)="editTransaction(transaction)">
-                编辑
-              </button>
-              <button type="button" class="btn btn-sm btn-danger" (click)="deleteTransaction(transaction)">
-                删除
-              </button>
+            <div class="transaction-items">
+              <div *ngFor="let transaction of group.transactions" class="transaction-item">
+                <div class="transaction-icon" [class.income]="transaction.type === 'income'">
+                  {{ getCategoryIcon(transaction.category, transaction.type) }}
+                </div>
+                
+                <div class="transaction-info">
+                  <div class="transaction-category">{{ transaction.category }}</div>
+                  <div class="transaction-meta">
+                    <span class="transaction-time">{{ formatTimeOnly(transaction.transactionTime) }}</span>
+                    <span *ngIf="transaction.account" class="transaction-account">{{ transaction.account }}</span>
+                    <span *ngIf="transaction.tags" class="transaction-tags">
+                      <span *ngFor="let tag of transaction.tags.split(',')" class="tag-badge-tiny">
+                        {{ tag.trim() }}
+                      </span>
+                    </span>
+                  </div>
+                  <div *ngIf="transaction.remark" class="transaction-remark">
+                    {{ transaction.remark }}
+                  </div>
+                </div>
+                
+                <div class="transaction-amount">
+                  <span [class.text-income]="transaction.type === 'income'" 
+                        [class.text-expense]="transaction.type === 'expense'">
+                    {{ transaction.type === 'income' ? '+' : '-' }}¥{{ transaction.amount | number:'1.2-2' }}
+                  </span>
+                </div>
+                
+                <div class="transaction-actions">
+                  <button type="button" class="btn btn-sm btn-secondary" (click)="editTransaction(transaction)">
+                    编辑
+                  </button>
+                  <button type="button" class="btn btn-sm btn-danger" (click)="deleteTransaction(transaction)">
+                    删除
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div *ngIf="page && page.totalPages > 1" class="pagination">
-          <button type="button" (click)="goToPage(0)" [disabled]="page.first">首页</button>
-          <button type="button" (click)="goToPage(page.number - 1)" [disabled]="page.first">上一页</button>
-          
-          <span class="page-info">
-            第 {{ page.number + 1 }} / {{ page.totalPages }} 页
-          </span>
-          
-          <button type="button" (click)="goToPage(page.number + 1)" [disabled]="page.last">下一页</button>
-          <button type="button" (click)="goToPage(page.totalPages - 1)" [disabled]="page.last">末页</button>
+          <div *ngIf="loadingMore" class="loading-more">
+            <div class="spinner-small"></div>
+            <span>加载中...</span>
+          </div>
+
+          <div *ngIf="!hasMore && transactions.length > 0" class="no-more-data">
+            没有更多数据了
+          </div>
         </div>
       </div>
 
@@ -699,41 +710,114 @@ import { Subscription } from 'rxjs';
       flex-shrink: 0;
     }
 
-    .pagination {
+    .card-header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .btn-export-small {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: 16px;
+      background: rgba(52, 152, 219, 0.1);
+      color: #3498db;
+      border: 1.5px solid rgba(52, 152, 219, 0.3);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+
+    .btn-export-small:hover {
+      background: #3498db;
+      color: white;
+      border-color: #3498db;
+    }
+
+    .transaction-list-scroll {
+      max-height: 600px;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+    }
+
+    .date-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .date-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .date-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, rgba(52, 152, 219, 0.05) 0%, rgba(52, 152, 219, 0.08) 100%);
+      border-radius: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .date-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .date-summary {
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .income-text {
+      color: #27ae60;
+      font-weight: 500;
+    }
+
+    .expense-text {
+      color: #e74c3c;
+      font-weight: 500;
+    }
+
+    .summary-divider {
+      color: #bdc3c7;
+    }
+
+    .transaction-items {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .loading-more {
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #ecf0f1;
-    }
-
-    .pagination button {
-      padding: 0.5rem 1rem;
-      border: 1.5px solid #ecf0f1;
-      background: white;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-size: 0.85rem;
+      gap: 0.5rem;
+      padding: 1.5rem;
       color: #7f8c8d;
-    }
-
-    .pagination button:hover:not(:disabled) {
-      border-color: #3498db;
-      color: #3498db;
-    }
-
-    .pagination button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .page-info {
       font-size: 0.9rem;
-      color: #7f8c8d;
-      font-weight: 500;
+    }
+
+    .spinner-small {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #ecf0f1;
+      border-top-color: #3498db;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .no-more-data {
+      text-align: center;
+      padding: 1.5rem;
+      color: #bdc3c7;
+      font-size: 0.85rem;
     }
 
     .modal-overlay {
@@ -885,8 +969,11 @@ import { Subscription } from 'rxjs';
 })
 export class TransactionListComponent implements OnInit, OnDestroy {
   transactions: Transaction[] = [];
+  groupedTransactions: { date: string; transactions: Transaction[]; income: number; expense: number }[] = [];
   page?: Page<Transaction>;
   loading = false;
+  loadingMore = false;
+  hasMore = true;
   showFilter = true;
   showAdvanced = false;
   activeQuickFilter: 'day' | 'week' | 'month' | 'year' | null = 'month';
@@ -905,6 +992,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
 
   private subscription?: Subscription;
   private pageSize = 20;
+  private currentPage = 0;
 
   private categoryIcons: Record<string, string> = {
     '餐饮': '🍽️', '交通': '🚗', '购物': '🛒', '娱乐': '🎮',
@@ -989,7 +1077,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
         });
         break;
     }
-    this.loadTransactions(0);
+    this.resetAndLoad();
   }
 
   addFilterTagFromInput(input: HTMLInputElement): void {
@@ -1020,7 +1108,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
 
   applyFilter(): void {
     this.activeQuickFilter = null;
-    this.loadTransactions(0);
+    this.resetAndLoad();
   }
 
   resetFilter(): void {
@@ -1036,13 +1124,122 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     this.activeQuickFilter = 'month';
     this.showAdvanced = false;
     this.selectedFilterTags = [];
-    this.loadTransactions(0);
+    this.resetAndLoad();
   }
 
-  goToPage(page: number): void {
-    if (page >= 0 && page < (this.page?.totalPages || 0)) {
-      this.loadTransactions(page);
+  private resetAndLoad(): void {
+    this.currentPage = 0;
+    this.transactions = [];
+    this.groupedTransactions = [];
+    this.hasMore = true;
+    this.loadTransactions();
+  }
+
+  onScroll(event: Event): void {
+    const element = event.target as HTMLElement;
+    const scrollTop = element.scrollTop;
+    const scrollHeight = element.scrollHeight;
+    const clientHeight = element.clientHeight;
+
+    if (scrollTop + clientHeight >= scrollHeight - 100 && !this.loadingMore && this.hasMore) {
+      this.loadMore();
     }
+  }
+
+  private loadMore(): void {
+    if (this.loadingMore || !this.hasMore) return;
+    this.currentPage++;
+    this.loadingMore = true;
+
+    const startDate = this.filterForm.get('startDate')?.value;
+    const endDate = this.filterForm.get('endDate')?.value;
+    const type = this.filterForm.get('type')?.value;
+    const tags = this.selectedFilterTags.length > 0 ? this.selectedFilterTags.join(',') : undefined;
+
+    let startTime: string | undefined;
+    let endTime: string | undefined;
+
+    if (startDate) {
+      startTime = startDate + 'T00:00:00';
+    }
+    if (endDate) {
+      endTime = endDate + 'T23:59:59';
+    }
+
+    this.subscription = this.transactionService.getTransactions(
+      this.currentPage, this.pageSize, startTime, endTime, type || undefined, tags
+    ).subscribe({
+      next: (result) => {
+        this.page = result;
+        this.transactions = [...this.transactions, ...result.content];
+        this.groupTransactions();
+        this.loadingMore = false;
+        if (result.last) {
+          this.hasMore = false;
+        }
+      },
+      error: () => {
+        this.loadingMore = false;
+        this.currentPage--;
+        alert('加载数据失败');
+      }
+    });
+  }
+
+  private groupTransactions(): void {
+    const groups: Map<string, { transactions: Transaction[]; income: number; expense: number }> = new Map();
+
+    for (const transaction of this.transactions) {
+      const dateKey = this.getDateKey(transaction.transactionTime);
+      if (!groups.has(dateKey)) {
+        groups.set(dateKey, { transactions: [], income: 0, expense: 0 });
+      }
+      const group = groups.get(dateKey)!;
+      group.transactions.push(transaction);
+      if (transaction.type === 'income') {
+        group.income += transaction.amount;
+      } else {
+        group.expense += transaction.amount;
+      }
+    }
+
+    this.groupedTransactions = Array.from(groups.entries()).map(([date, data]) => ({
+      date,
+      transactions: data.transactions,
+      income: data.income,
+      expense: data.expense
+    }));
+  }
+
+  private getDateKey(dateStr?: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  formatDateLabel(dateStr: string): string {
+    if (!dateStr) return '';
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+    if (dateStr === todayStr) {
+      return '今天';
+    } else if (dateStr === yesterdayStr) {
+      return '昨天';
+    } else {
+      const parts = dateStr.split('-');
+      return `${parseInt(parts[1])}月${parseInt(parts[2])}日`;
+    }
+  }
+
+  formatTimeOnly(dateStr?: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   }
 
   private loadExistingTags(): void {
@@ -1054,7 +1251,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadTransactions(page: number = 0): void {
+  private loadTransactions(): void {
     this.loading = true;
 
     const startDate = this.filterForm.get('startDate')?.value;
@@ -1073,12 +1270,16 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     }
 
     this.subscription = this.transactionService.getTransactions(
-      page, this.pageSize, startTime, endTime, type || undefined, tags
+      this.currentPage, this.pageSize, startTime, endTime, type || undefined, tags
     ).subscribe({
       next: (result) => {
         this.page = result;
         this.transactions = result.content;
+        this.groupTransactions();
         this.loading = false;
+        if (result.last) {
+          this.hasMore = false;
+        }
       },
       error: () => {
         this.loading = false;
@@ -1126,7 +1327,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
       next: () => {
         this.saving = false;
         this.closeEditModal();
-        this.loadTransactions(this.page?.number || 0);
+        this.resetAndLoad();
       },
       error: () => {
         this.saving = false;
@@ -1153,7 +1354,7 @@ export class TransactionListComponent implements OnInit, OnDestroy {
       next: () => {
         this.deleting = false;
         this.closeDeleteConfirm();
-        this.loadTransactions(this.page?.number || 0);
+        this.resetAndLoad();
       },
       error: () => {
         this.deleting = false;
