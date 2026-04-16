@@ -11,46 +11,79 @@ import { Subscription } from 'rxjs';
   imports: [CommonModule, ReactiveFormsModule],
   template: `
     <div class="list-container">
-      <div class="card filter-card">
-        <div class="card-header">
-          <h3 class="card-title">🔍 筛选条件</h3>
-          <button type="button" class="btn btn-sm btn-outline" (click)="toggleFilter()">
-            {{ showFilter ? '收起' : '展开' }}
+      <div class="search-bar">
+        <div class="quick-filters">
+          <button 
+            type="button" 
+            class="quick-btn" 
+            [class.active]="activeQuickFilter === 'day'"
+            (click)="setQuickFilter('day')"
+          >
+            本日
+          </button>
+          <button 
+            type="button" 
+            class="quick-btn" 
+            [class.active]="activeQuickFilter === 'week'"
+            (click)="setQuickFilter('week')"
+          >
+            本周
+          </button>
+          <button 
+            type="button" 
+            class="quick-btn" 
+            [class.active]="activeQuickFilter === 'month'"
+            (click)="setQuickFilter('month')"
+          >
+            本月
+          </button>
+          <button 
+            type="button" 
+            class="quick-btn" 
+            [class.active]="activeQuickFilter === 'year'"
+            (click)="setQuickFilter('year')"
+          >
+            本年
           </button>
         </div>
         
-        <div *ngIf="showFilter" class="filter-section">
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">开始日期</label>
+        <form [formGroup]="filterForm" class="search-form">
+          <div class="search-row">
+            <div class="search-item">
+              <label class="search-label">开始日期</label>
               <input type="date" formControlName="startDate" class="form-control">
             </div>
-            <div class="form-group">
-              <label class="form-label">结束日期</label>
+            <div class="search-item">
+              <label class="search-label">结束日期</label>
               <input type="date" formControlName="endDate" class="form-control">
             </div>
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">收支类型</label>
+            <div class="search-item">
+              <label class="search-label">收支类型</label>
               <select formControlName="type" class="form-control">
                 <option value="">全部</option>
                 <option value="income">收入</option>
                 <option value="expense">支出</option>
               </select>
             </div>
-            <div class="form-group">
-              <label class="form-label">标签</label>
-              <input type="text" formControlName="tags" class="form-control" placeholder="输入标签搜索">
+          </div>
+          
+          <div *ngIf="showAdvanced" class="advanced-section">
+            <div class="search-row">
+              <div class="search-item">
+                <label class="search-label">标签</label>
+                <input type="text" formControlName="tags" class="form-control" placeholder="输入标签搜索">
+              </div>
             </div>
           </div>
           
-          <div class="filter-actions">
-            <button type="button" class="btn btn-secondary" (click)="resetFilter()">重置</button>
-            <button type="button" class="btn btn-primary" (click)="applyFilter()">查询</button>
+          <div class="search-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="toggleAdvanced()">
+              {{ showAdvanced ? '收起高级' : '更多' }}
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" (click)="resetFilter()">重置</button>
+            <button type="button" class="btn btn-primary btn-sm" (click)="applyFilter()">查询</button>
           </div>
-        </div>
+        </form>
       </div>
 
       <div class="card">
@@ -203,12 +236,90 @@ import { Subscription } from 'rxjs';
   `,
   styles: [`
     .list-container {
-      max-width: 1000px;
+      max-width: 1400px;
       margin: 0 auto;
     }
 
-    .filter-card {
+    .search-bar {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 1rem 1.5rem;
       margin-bottom: 1.5rem;
+    }
+
+    .quick-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #ecf0f1;
+    }
+
+    .quick-btn {
+      padding: 0.5rem 1rem;
+      border: 1px solid #ecf0f1;
+      background: white;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #7f8c8d;
+    }
+
+    .quick-btn:hover {
+      border-color: #3498db;
+      color: #3498db;
+    }
+
+    .quick-btn.active {
+      background: #3498db;
+      color: white;
+      border-color: #3498db;
+    }
+
+    .search-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .search-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: flex-end;
+    }
+
+    .search-item {
+      display: flex;
+      flex-direction: column;
+      min-width: 140px;
+    }
+
+    .search-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #7f8c8d;
+      margin-bottom: 0.35rem;
+    }
+
+    .search-item .form-control {
+      padding: 0.6rem 0.85rem;
+      font-size: 0.9rem;
+    }
+
+    .advanced-section {
+      padding-top: 0.5rem;
+      border-top: 1px dashed #ecf0f1;
+    }
+
+    .search-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .record-count {
@@ -421,9 +532,17 @@ import { Subscription } from 'rxjs';
         margin-top: 0.5rem;
       }
 
-      .form-row {
+      .search-row {
         flex-direction: column;
-        gap: 0;
+        align-items: stretch;
+      }
+
+      .search-item {
+        min-width: auto;
+      }
+
+      .quick-filters {
+        justify-content: center;
       }
     }
   `]
@@ -433,6 +552,8 @@ export class TransactionListComponent implements OnInit, OnDestroy {
   page?: Page<Transaction>;
   loading = false;
   showFilter = true;
+  showAdvanced = false;
+  activeQuickFilter: 'day' | 'week' | 'month' | 'year' | null = 'month';
   accounts: string[] = ['支付宝', '微信', '银行卡', '现金', '信用卡'];
 
   filterForm: FormGroup;
@@ -491,7 +612,49 @@ export class TransactionListComponent implements OnInit, OnDestroy {
     this.showFilter = !this.showFilter;
   }
 
+  toggleAdvanced(): void {
+    this.showAdvanced = !this.showAdvanced;
+  }
+
+  setQuickFilter(range: 'day' | 'week' | 'month' | 'year'): void {
+    this.activeQuickFilter = range;
+    const now = new Date();
+
+    switch (range) {
+      case 'day':
+        this.filterForm.patchValue({
+          startDate: this.formatDate(now),
+          endDate: this.formatDate(now)
+        });
+        break;
+      case 'week':
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        this.filterForm.patchValue({
+          startDate: this.formatDate(weekStart),
+          endDate: this.formatDate(now)
+        });
+        break;
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        this.filterForm.patchValue({
+          startDate: this.formatDate(monthStart),
+          endDate: this.formatDate(now)
+        });
+        break;
+      case 'year':
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        this.filterForm.patchValue({
+          startDate: this.formatDate(yearStart),
+          endDate: this.formatDate(now)
+        });
+        break;
+    }
+    this.loadTransactions(0);
+  }
+
   applyFilter(): void {
+    this.activeQuickFilter = null;
     this.loadTransactions(0);
   }
 
@@ -505,6 +668,8 @@ export class TransactionListComponent implements OnInit, OnDestroy {
       type: '',
       tags: ''
     });
+    this.activeQuickFilter = 'month';
+    this.showAdvanced = false;
     this.loadTransactions(0);
   }
 

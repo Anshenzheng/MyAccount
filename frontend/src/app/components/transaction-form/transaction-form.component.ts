@@ -10,150 +10,189 @@ import { Transaction } from '../../models/transaction.model';
   imports: [CommonModule, ReactiveFormsModule],
   template: `
     <div class="form-container">
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title">📝 记一笔</h2>
-        </div>
-        
-        <div class="type-toggle">
-          <button 
-            type="button" 
-            class="type-btn" 
-            [class.active]="form.get('type')?.value === 'expense'"
-            (click)="setType('expense')"
-          >
-            支出
-          </button>
-          <button 
-            type="button" 
-            class="type-btn" 
-            [class.active]="form.get('type')?.value === 'income'"
-            (click)="setType('income')"
-          >
-            收入
-          </button>
-        </div>
-
-        <form [formGroup]="form" (ngSubmit)="onSubmit()">
-          <div class="amount-section">
-            <span class="currency-symbol">¥</span>
-            <input 
-              type="number" 
-              formControlName="amount" 
-              class="amount-input"
-              placeholder="0.00"
-              step="0.01"
-              min="0.01"
+      <div class="form-main">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">📝 记一笔</h2>
+          </div>
+          
+          <div class="type-toggle">
+            <button 
+              type="button" 
+              class="type-btn" 
+              [class.active]="form.get('type')?.value === 'expense'"
+              (click)="setType('expense')"
             >
-          </div>
-          <div *ngIf="form.get('amount')?.invalid && form.get('amount')?.touched" class="error-message">
-            请输入有效金额
-          </div>
-
-          <div class="quick-categories">
-            <div class="section-label">快捷分类</div>
-            <div class="category-grid">
-              <button 
-                type="button" 
-                *ngFor="let cat of categories" 
-                class="category-btn"
-                [class.active]="form.get('category')?.value === cat"
-                (click)="selectCategory(cat)"
-              >
-                {{ getCategoryIcon(cat) }} {{ cat }}
-              </button>
-            </div>
-          </div>
-          <div *ngIf="form.get('category')?.invalid && form.get('category')?.touched" class="error-message">
-            请选择分类
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">时间</label>
-              <input type="datetime-local" formControlName="transactionTime" class="form-control">
-            </div>
-            <div class="form-group">
-              <label class="form-label">账户</label>
-              <select formControlName="account" class="form-control">
-                <option value="">请选择账户</option>
-                <option *ngFor="let acc of accounts" [value]="acc">{{ acc }}</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">标签</label>
-            <div class="tags-input-container">
-              <div class="selected-tags">
-                <span *ngFor="let tag of selectedTags" class="tag-badge">
-                  {{ tag }}
-                  <button type="button" class="tag-remove" (click)="removeTag(tag)">&times;</button>
-                </span>
-              </div>
-              <input 
-                type="text" 
-                #tagInput
-                [formControl]="tagControl"
-                class="form-control tag-input"
-                placeholder="输入标签后按回车添加"
-                (keyup.enter)="addTag(tagInput)"
-              >
-            </div>
-            <div *ngIf="existingTags.length > 0" class="existing-tags">
-              <span class="hint">常用标签：</span>
-              <button 
-                type="button" 
-                *ngFor="let tag of existingTags" 
-                class="existing-tag-btn"
-                (click)="toggleExistingTag(tag)"
-              >
-                {{ tag }}
-              </button>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">备注</label>
-            <textarea formControlName="remark" class="form-control" rows="2" placeholder="添加备注..."></textarea>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn btn-secondary" (click)="resetForm()">重置</button>
-            <button type="submit" class="btn btn-primary" [disabled]="form.invalid || loading">
-              {{ loading ? '保存中...' : '保存' }}
+              支出
+            </button>
+            <button 
+              type="button" 
+              class="type-btn" 
+              [class.active]="form.get('type')?.value === 'income'"
+              (click)="setType('income')"
+            >
+              收入
             </button>
           </div>
-        </form>
 
-        <div *ngIf="showSuccess" class="success-toast">
-          ✅ 保存成功！
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="form-grid">
+              <div class="form-left">
+                <div class="amount-section">
+                  <span class="currency-symbol">¥</span>
+                  <input 
+                    type="number" 
+                    formControlName="amount" 
+                    class="amount-input"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0.01"
+                  >
+                </div>
+                <div *ngIf="form.get('amount')?.invalid && form.get('amount')?.touched" class="error-message">
+                  请输入有效金额
+                </div>
+
+                <div class="quick-categories">
+                  <div class="section-label">快捷分类</div>
+                  <div class="category-grid">
+                    <button 
+                      type="button" 
+                      *ngFor="let cat of categories" 
+                      class="category-btn"
+                      [class.active]="form.get('category')?.value === cat"
+                      (click)="selectCategory(cat)"
+                    >
+                      {{ getCategoryIcon(cat) }} {{ cat }}
+                    </button>
+                  </div>
+                </div>
+                <div *ngIf="form.get('category')?.invalid && form.get('category')?.touched" class="error-message">
+                  请选择分类
+                </div>
+              </div>
+
+              <div class="form-right">
+                <div class="form-group">
+                  <label class="form-label">时间</label>
+                  <input type="datetime-local" formControlName="transactionTime" class="form-control">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">账户</label>
+                  <select formControlName="account" class="form-control">
+                    <option value="">请选择账户</option>
+                    <option *ngFor="let acc of accounts" [value]="acc">{{ acc }}</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">标签</label>
+                  <div class="tags-input-container">
+                    <div class="selected-tags">
+                      <span *ngFor="let tag of selectedTags" class="tag-badge">
+                        {{ tag }}
+                        <button type="button" class="tag-remove" (click)="removeTag(tag)">&times;</button>
+                      </span>
+                    </div>
+                    <input 
+                      type="text" 
+                      #tagInput
+                      [formControl]="tagControl"
+                      class="form-control tag-input"
+                      placeholder="输入标签后按回车添加"
+                      (keyup.enter)="addTag(tagInput)"
+                    >
+                  </div>
+                  <div *ngIf="existingTags.length > 0" class="existing-tags">
+                    <span class="hint">常用标签：</span>
+                    <button 
+                      type="button" 
+                      *ngFor="let tag of existingTags" 
+                      class="existing-tag-btn"
+                      (click)="toggleExistingTag(tag)"
+                    >
+                      {{ tag }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">备注</label>
+                  <textarea formControlName="remark" class="form-control" rows="2" placeholder="添加备注..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                  <button type="button" class="btn btn-secondary" (click)="resetForm()">重置</button>
+                  <button type="submit" class="btn btn-primary" [disabled]="form.invalid || loading">
+                    {{ loading ? '保存中...' : '保存' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+
+          <div *ngIf="showSuccess" class="success-toast">
+            ✅ 保存成功！
+          </div>
         </div>
       </div>
 
-      <div class="card quick-entries-card">
-        <div class="card-header">
-          <h2 class="card-title">⚡ 快捷录入</h2>
-        </div>
-        <div class="quick-entries">
-          <button 
-            type="button" 
-            *ngFor="let entry of quickEntries" 
-            class="quick-entry-btn"
-            (click)="quickEntry(entry)"
-          >
-            <span class="quick-entry-icon">{{ entry.icon }}</span>
-            <span class="quick-entry-name">{{ entry.name }}</span>
-            <span class="quick-entry-amount">{{ entry.type === 'income' ? '+' : '-' }}¥{{ entry.amount }}</span>
-          </button>
+      <div class="form-sidebar">
+        <div class="card quick-entries-card">
+          <div class="card-header">
+            <h2 class="card-title">⚡ 快捷录入</h2>
+          </div>
+          <div class="quick-entries">
+            <button 
+              type="button" 
+              *ngFor="let entry of quickEntries" 
+              class="quick-entry-btn"
+              (click)="quickEntry(entry)"
+            >
+              <span class="quick-entry-icon">{{ entry.icon }}</span>
+              <span class="quick-entry-name">{{ entry.name }}</span>
+              <span class="quick-entry-amount">{{ entry.type === 'income' ? '+' : '-' }}¥{{ entry.amount }}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
   `,
   styles: [`
     .form-container {
-      max-width: 600px;
+      max-width: 1400px;
       margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1.5rem;
+    }
+
+    .form-main {
+      grid-column: 1;
+    }
+
+    .form-sidebar {
+      grid-column: 2;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    .form-left {
+      grid-column: 1;
+    }
+
+    .form-right {
+      grid-column: 2;
+    }
+
+    .quick-entries-card {
+      position: sticky;
+      top: 1.5rem;
     }
 
     .type-toggle {
@@ -376,10 +415,6 @@ import { Transaction } from '../../models/transaction.model';
       }
     }
 
-    .quick-entries-card {
-      margin-top: 1.5rem;
-    }
-
     .quick-entries {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -428,7 +463,30 @@ import { Transaction } from '../../models/transaction.model';
       color: #27ae60;
     }
 
+    @media (max-width: 1024px) {
+      .form-container {
+        grid-template-columns: 1fr;
+      }
+
+      .form-sidebar {
+        grid-column: 1;
+      }
+
+      .quick-entries-card {
+        position: static;
+      }
+    }
+
     @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      .form-right {
+        grid-column: 1;
+      }
+
       .category-grid {
         grid-template-columns: repeat(3, 1fr);
       }
