@@ -1,8 +1,34 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { TransactionService } from '../../services/transaction.service';
 import { Transaction } from '../../models/transaction.model';
+
+function amountValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const value = control.value;
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    const strValue = String(value);
+    if (strValue.includes('.')) {
+      const parts = strValue.split('.');
+      const integerPart = parts[0];
+      const decimalPart = parts[1];
+      if (integerPart.length > 9) {
+        return { 'amountTooLarge': true };
+      }
+      if (decimalPart && decimalPart.length > 2) {
+        return { 'decimalTooLong': true };
+      }
+    } else {
+      if (strValue.length > 9) {
+        return { 'amountTooLarge': true };
+      }
+    }
+    return null;
+  };
+}
 
 @Component({
   selector: 'app-transaction-form',
@@ -50,7 +76,10 @@ import { Transaction } from '../../models/transaction.model';
               >
             </div>
             <div *ngIf="form.get('amount')?.invalid && form.get('amount')?.touched" class="amount-error">
-              请输入有效金额
+              <span *ngIf="form.get('amount')?.errors?.['required']">请输入金额</span>
+              <span *ngIf="form.get('amount')?.errors?.['min']">金额必须大于0</span>
+              <span *ngIf="form.get('amount')?.errors?.['amountTooLarge']">整数部分不能超过9位</span>
+              <span *ngIf="form.get('amount')?.errors?.['decimalTooLong']">小数部分不能超过2位</span>
             </div>
           </div>
 
@@ -79,7 +108,7 @@ import { Transaction } from '../../models/transaction.model';
             <div class="section-row two-col">
               <div class="form-item">
                 <label class="form-label">时间</label>
-                <input type="datetime-local" formControlName="transactionTime" class="form-control">
+                <input type="datetime-local" formControlName="transactionTime" class="form-control" [max]="maxDateTime">
               </div>
               <div class="form-item">
                 <label class="form-label">账户</label>
@@ -126,8 +155,11 @@ import { Transaction } from '../../models/transaction.model';
 
             <div class="section-row">
               <div class="form-item">
-                <label class="form-label">备注</label>
-                <textarea formControlName="remark" class="form-control" rows="2" placeholder="添加备注..."></textarea>
+                <label class="form-label">备注 <span class="char-count">{{ remarkLength }}/50</span></label>
+                <textarea formControlName="remark" class="form-control" rows="2" placeholder="添加备注..." maxlength="50"></textarea>
+                <div *ngIf="form.get('remark')?.invalid && form.get('remark')?.touched" class="field-error">
+                  备注不能超过50字
+                </div>
               </div>
             </div>
           </div>
@@ -383,6 +415,12 @@ import { Transaction } from '../../models/transaction.model';
       color: #e74c3c;
       font-size: 0.8rem;
       margin-top: 0.25rem;
+    }
+
+    .char-count {
+      color: #bdc3c7;
+      font-weight: 400;
+      margin-left: 0.25rem;
     }
 
     .tags-input-container {
@@ -691,6 +729,11 @@ export class TransactionFormComponent implements OnInit {
   selectedTags: string[] = [];
   loading = false;
   showSuccess = false;
+  maxDateTime: string;
+
+  get remarkLength(): number {
+    return this.form.get('remark')?.value?.length || 0;
+  }
 
   quickEntries = [
     { name: '早餐', amount: 10, type: 'expense' as const, category: '餐饮', icon: '🍳' },
@@ -711,13 +754,14 @@ export class TransactionFormComponent implements OnInit {
     private fb: FormBuilder,
     private transactionService: TransactionService
   ) {
+    this.maxDateTime = this.formatDateTime(new Date());
     this.form = this.fb.group({
-      amount: [null, [Validators.required, Validators.min(0.01)]],
+      amount: [null, [Validators.required, Validators.min(0.01), amountValidator()]],
       type: ['expense', Validators.required],
       category: ['', Validators.required],
       transactionTime: [this.formatDateTime(new Date())],
       account: [''],
-      remark: ['']
+      remark: ['', [Validators.maxLength(50)]]
     });
   }
 
